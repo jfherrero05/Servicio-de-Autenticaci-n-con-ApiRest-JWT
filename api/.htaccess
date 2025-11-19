@@ -1,0 +1,7 @@
+RewriteEngine On
+
+# POST /api/login → login.php
+RewriteRule ^login$ login.php [L]
+
+# GET /api/welcome → welcome.php
+RewriteRule ^welcome$ welcome.php [L]
