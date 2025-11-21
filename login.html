@@ -2,70 +2,56 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
-
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <style>
-        body {
-            background: #f0f2f5;
-        }
-        .login-card {
-            max-width: 400px;
-            margin: 80px auto;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-    </style>
+    <title>Login JWT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-
-<div class="container">
-    <div class="card login-card">
+<body class="bg-light d-flex justify-content-center align-items-center vh-100">
+    <div class="card p-4 shadow" style="max-width: 400px; width: 100%;">
         <h3 class="text-center mb-4">Iniciar Sesión</h3>
-
+        
         <form id="loginForm">
             <div class="mb-3">
                 <label class="form-label">Usuario</label>
-                <input type="text" id="username" class="form-control" placeholder="Introduce tu usuario" required>
+                <input type="text" id="username" class="form-control" required>
             </div>
-
             <div class="mb-3">
                 <label class="form-label">Contraseña</label>
-                <input type="password" id="password" class="form-control" placeholder="Introduce tu contraseña" required>
+                <input type="password" id="password" class="form-control" required>
             </div>
-
-            <button type="submit" class="btn btn-primary w-100">Entrar</button>
+            <button type="submit" class="btn btn-primary w-100">Ingresar</button>
         </form>
+
+        <div id="mensajeError" class="alert alert-danger mt-3 d-none"></div>
     </div>
-</div>
 
-<script>
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
 
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
+            // Petición POST a la API [cite: 53, 80]
+            const response = await fetch('api/login.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            });
 
-    const res = await fetch("api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-    });
+            const data = await response.json();
 
-    const data = await res.json();
-
-    if (res.ok) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("username", data.username);
-        location.href = "bienvenida.html";
-    } else {
-        alert(data.error || "Credenciales incorrectas");
-    }
-});
-</script>
-
+            if (response.ok) {
+                // Guardar token en localStorage 
+                localStorage.setItem('token', data.token);
+                // Redirigir a bienvenida
+                window.location.href = 'bienvenida.html';
+            } else {
+                // Mostrar error
+                const alerta = document.getElementById('mensajeError');
+                alerta.textContent = data.message;
+                alerta.classList.remove('d-none');
+            }
+        });
+    </script>
 </body>
 </html>
