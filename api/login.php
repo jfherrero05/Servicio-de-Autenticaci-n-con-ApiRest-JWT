@@ -1,57 +1,55 @@
 <?php
-// api/login.php
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
+// Configuración de cabeceras para CORS y JSON
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *"); 
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-// 1. Lista de usuarios (Simulación de Base de Datos) [cite: 90]
+// Responde a las peticiones OPTIONS (preflight CORS)
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Array de usuarios para simular la base de datos [cite: 94, 95]
 $usuarios = [
-    "admin" => "1234",
-    "usuario" => "abcd",
-    "paco" => "paco"
+    ["username" => "admin", "password" => "1234", "name" => "Administrador del Sistema"],
+    ["username" => "user", "password" => "abcd", "name" => "Usuario Básico"],
+    ["username" => "Juanfran", "password" => "betii", "name" => "Juanfran"]
 ];
 
-// 2. Leer entrada JSON
+// Obtener los datos JSON (cuerpo de la petición)
 $data = json_decode(file_get_contents("php://input"), true);
-$username = $data['username'] ?? '';
-$password = $data['password'] ?? '';
+$input_user = $data['username'] ?? '';
+$input_pass = $data['password'] ?? '';
 
-// 3. Validar credenciales
-if (isset($usuarios[$username]) && $usuarios[$username] === $password) {
-    
-    // --- GENERACIÓN MANUAL DEL JWT ---
-    
-    // A. Definir Header y Payload
-    $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
-    $payload = json_encode([
-        'sub' => $username,      // Usuario
-        'iat' => time(),         // Creación
-        'exp' => time() + 3600   // Expiración (1 hora)
-    ]);
+$authenticated_user = null;
 
-    // B. Funciones para codificar en Base64Url (Requisito estándar JWT)
-    function base64UrlEncode($data) {
-        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+// Validar credenciales
+foreach ($usuarios as $user) {
+    if ($user['username'] === $input_user && $user['password'] === $input_pass) {
+        $authenticated_user = $user;
+        break;
     }
+}
 
-    // C. Codificar partes
-    $base64UrlHeader = base64UrlEncode($header);
-    $base64UrlPayload = base64UrlEncode($payload);
+if ($authenticated_user) {
+    // Payload del token (información para identificar al usuario)
+    $payload = [
+        'username' => $authenticated_user['username'],
+        'name' => $authenticated_user['name'],
+        'iat' => time() // Issued At
+    ];
+    
+    // Generar el Token usando base64_encode [cite: 62]
+    $token = base64_encode(json_encode($payload));
 
-    // D. Crear la Firma (Signature) usando HMAC SHA256
-    $secret = 'tu_clave_secreta_betis'; // En producción esto se guarda en variables de entorno
-    $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, $secret, true);
-    $base64UrlSignature = base64UrlEncode($signature);
-
-    // E. Unir todo el token
-    $jwt = $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
-
-    // 4. Respuesta exitosa con Token [cite: 58, 82]
-    echo json_encode(["status" => "success", "token" => $jwt]);
-
+    // Respuesta exitosa (200 OK)
+    http_response_code(200);
+    echo json_encode(['token' => $token, 'message' => 'Login successful']);
 } else {
-    // 5. Respuesta de error (401 Unauthorized) [cite: 59]
+    // Credenciales incorrectas (401 Unauthorized) [cite: 63]
     http_response_code(401);
-    echo json_encode(["status" => "error", "message" => "Credenciales incorrectas"]);
+    echo json_encode(['message' => 'Credenciales incorrectas']);
 }
 ?>

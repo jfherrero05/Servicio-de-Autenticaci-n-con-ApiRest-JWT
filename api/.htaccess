@@ -1,7 +1,6 @@
 RewriteEngine On
-
-# POST /api/login → login.php
-RewriteRule ^login$ login.php [L]
-
-# GET /api/welcome → welcome.php
-RewriteRule ^welcome$ welcome.php [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+# Reescribe cualquier petición que no sea un archivo o directorio existente
+# para que use el script PHP correspondiente.
+RewriteRule ^(.*?)/?$ $1.php [L]

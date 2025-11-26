@@ -1,78 +1,44 @@
 <?php
-// api/welcome.php
+// Configuración de cabeceras para CORS y JSON
+header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods: GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-// 1. Obtener cabeceras de la petición
-$headers = null;
-if (isset($_SERVER['Authorization'])) {
-    $headers = trim($_SERVER["Authorization"]);
-} else if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-    $headers = trim($_SERVER["HTTP_AUTHORIZATION"]);
-} elseif (function_exists('apache_request_headers')) {
-    $requestHeaders = apache_request_headers();
-    if (isset($requestHeaders['Authorization'])) {
-        $headers = trim($requestHeaders['Authorization']);
-    }
+// Responde a las peticiones OPTIONS (preflight CORS)
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
 }
 
-// 2. Extraer el token (Bearer <token>) 
-$token = null;
-if (!empty($headers) && preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
+// 1. Obtener la cabecera de autorización (Authorization: Bearer <token>) [cite: 90]
+$auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+
+if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
     $token = $matches[1];
-}
+    $payload_json = base64_decode($token);
+    $payload = json_decode($payload_json, true);
 
-if (!$token) {
-    http_response_code(403); // [cite: 68]
-    echo json_encode(["message" => "No se proporcionó token"]);
-    exit();
-}
-
-// --- VALIDACIÓN MANUAL DEL JWT ---
-
-// 3. Separar el token en partes
-$parts = explode('.', $token);
-if (count($parts) !== 3) {
-    http_response_code(403);
-    echo json_encode(["message" => "Token mal formado"]);
-    exit();
-}
-
-list($header, $payload, $signature) = $parts;
-
-// 4. Recrear la firma para verificar autenticidad
-$secret = 'tu_clave_secreta_betis'; // Debe ser la misma clave que en login.php
-
-function base64UrlEncode($data) {
-    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-}
-
-// Recalcular firma con los datos recibidos
-$valid_signature = hash_hmac('sha256', $header . "." . $payload, $secret, true);
-$base64UrlValidSignature = base64UrlEncode($valid_signature);
-
-// 5. Comparar firmas
-if ($base64UrlValidSignature === $signature) {
-    // Firma válida: Decodificar payload
-    $payloadData = json_decode(base64_decode($payload), true);
-
-    // Verificar expiración
-    if (isset($payloadData['exp']) && $payloadData['exp'] < time()) {
-        http_response_code(401); // Token expirado
-        echo json_encode(["message" => "El token ha expirado"]);
-        exit();
+    // Validación: Chequea si el token se decodifica y contiene datos de usuario
+    if ($payload && isset($payload['username'])) {
+        // Token válido. Responder con datos del usuario [cite: 66, 67]
+        $user_name = $payload['name'] ?? $payload['username'];
+        $response = [
+            'message' => "Acceso permitido. Los datos se han cargado desde el API.",
+            'username' => $user_name,
+            'current_time' => date('H:i:s'), // Hora actual [cite: 66]
+            'welcome_message' => "¡Bienvenido/a, {$user_name}!" // Mensaje personalizado [cite: 67]
+        ];
+        http_response_code(200);
+        echo json_encode($response);
+    } else {
+        // Token inválido (aunque presente)
+        http_response_code(403); // Forbidden [cite: 72]
+        echo json_encode(['message' => 'Token inválido o expirado. Acceso denegado.']);
     }
-
-    // 6. Retornar datos de bienvenida [cite: 61, 81]
-    echo json_encode([
-        "status" => "success",
-        "usuario" => $payloadData['sub'],
-        "hora" => date("H:i:s"),
-        "mensaje" => "Bienvenido a la zona segura de la API"
-    ]);
 } else {
-    // Firma inválida
-    http_response_code(403);
-    echo json_encode(["message" => "Firma del token inválida"]);
+    // No hay cabecera Authorization
+    http_response_code(403); // Forbidden [cite: 72]
+    echo json_encode(['message' => 'Acceso denegado. Se requiere un token de autenticación.']);
 }
 ?>

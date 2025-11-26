@@ -2,54 +2,56 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Login JWT</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Login de Usuario - JWT</title>
 </head>
-<body class="bg-light d-flex justify-content-center align-items-center vh-100">
-    <div class="card p-4 shadow" style="max-width: 400px; width: 100%;">
-        <h3 class="text-center mb-4">Iniciar Sesión</h3>
+<body>
+    <h1>Iniciar Sesión</h1>
+    <form id="loginForm">
+        <label for="username">Nombre de usuario:</label><br>
+        <input type="text" id="username" name="username" required><br><br>
         
-        <form id="loginForm">
-            <div class="mb-3">
-                <label class="form-label">Usuario</label>
-                <input type="text" id="username" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Contraseña</label>
-                <input type="password" id="password" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Ingresar</button>
-        </form>
-
-        <div id="mensajeError" class="alert alert-danger mt-3 d-none"></div>
-    </div>
+        <label for="password">Contraseña:</label><br>
+        <input type="password" id="password" name="password" required><br><br>
+        
+        <button type="submit">Entrar</button>
+    </form>
+    <p id="errorMessage" style="color: red;"></p>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); 
 
-            // Petición POST a la API [cite: 53, 80]
-            const response = await fetch('api/login.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: user, password: pass })
-            });
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = ''; 
 
-            const data = await response.json();
+            try {
+                // Llamada al endpoint de autenticación [cite: 57]
+                const response = await fetch('./api/login.php', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
 
-            if (response.ok) {
-                // Guardar token en localStorage 
-                localStorage.setItem('token', data.token);
-                // Redirigir a bienvenida
-                window.location.href = 'bienvenida.html';
-            } else {
-                // Mostrar error
-                const alerta = document.getElementById('mensajeError');
-                alerta.textContent = data.message;
-                alerta.classList.remove('d-none');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Almacenar el token [cite: 89]
+                    localStorage.setItem('jwt_token', data.token);
+                    
+                    // Redirigir a la pantalla de bienvenida
+                    window.location.href = './bienvenida.html';
+                } else {
+                    // Manejar error 401 Unauthorized
+                    const errorData = await response.json();
+                    errorMessage.textContent = 'Error de autenticación: ' + (errorData.message || 'Credenciales incorrectas');
+                }
+            } catch (error) {
+                console.error('Error de conexión:', error);
+                errorMessage.textContent = 'Error al intentar conectar con el servidor.';
             }
         });
     </script>
