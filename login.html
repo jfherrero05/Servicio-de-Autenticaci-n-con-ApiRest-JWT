@@ -2,20 +2,55 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Login de Usuario - JWT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Acceso Seguro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f2f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .card-login {
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
-    <h1>Iniciar Sesión</h1>
-    <form id="loginForm">
-        <label for="username">Nombre de usuario:</label><br>
-        <input type="text" id="username" name="username" required><br><br>
-        
-        <label for="password">Contraseña:</label><br>
-        <input type="password" id="password" name="password" required><br><br>
-        
-        <button type="submit">Entrar</button>
-    </form>
-    <p id="errorMessage" style="color: red;"></p>
+
+    <div class="card card-login">
+        <div class="card-header bg-primary text-white text-center py-3">
+            <h4 class="mb-0">Iniciar Sesión</h4>
+        </div>
+        <div class="card-body p-4">
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Usuario</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Ej: admin" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label">Contraseña</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="••••••" required>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Entrar</button>
+                </div>
+            </form>
+            
+            <div id="alertBox" class="alert alert-danger mt-3 d-none" role="alert">
+                <span id="errorMessage"></span>
+            </div>
+        </div>
+        <div class="card-footer text-center text-muted">
+            <small>Sistema de Autenticación JWT</small>
+        </div>
+    </div>
 
     <script>
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
@@ -23,35 +58,35 @@
 
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            
+            // Elementos para mostrar errores
+            const alertBox = document.getElementById('alertBox');
             const errorMessage = document.getElementById('errorMessage');
+            
+            // Limpiar errores previos
+            alertBox.classList.add('d-none');
             errorMessage.textContent = ''; 
 
             try {
-                // Llamada al endpoint de autenticación [cite: 57]
-                const response = await fetch('./api/login.php', { 
+                const response = await fetch('api/login.php', { 
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
 
+                const data = await response.json();
+
                 if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Almacenar el token [cite: 89]
                     localStorage.setItem('jwt_token', data.token);
-                    
-                    // Redirigir a la pantalla de bienvenida
-                    window.location.href = './bienvenida.html';
+                    window.location.href = 'bienvenida.html';
                 } else {
-                    // Manejar error 401 Unauthorized
-                    const errorData = await response.json();
-                    errorMessage.textContent = 'Error de autenticación: ' + (errorData.message || 'Credenciales incorrectas');
+                    errorMessage.textContent = data.message || 'Credenciales incorrectas';
+                    alertBox.classList.remove('d-none'); // Mostrar alerta roja
                 }
             } catch (error) {
-                console.error('Error de conexión:', error);
-                errorMessage.textContent = 'Error al intentar conectar con el servidor.';
+                console.error('Error:', error);
+                errorMessage.textContent = 'Error de conexión con el servidor.';
+                alertBox.classList.remove('d-none');
             }
         });
     </script>
